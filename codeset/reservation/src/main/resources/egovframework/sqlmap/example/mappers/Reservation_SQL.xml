@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.example.sample.reservation.service.impl.ReservationMapper">
+
+	<resultMap id="reservation" type="egovframework.example.sample.reservation.service.ReservationVO">
+		<result property="idx" column="idx"/>
+		<result property="title" column="title"/>
+		<result property="contents" column="contents"/>
+		<result property="count" column="count"/>
+		<result property="writer" column="writer"/>
+		<result property="writerNm" column="writerNm"/>
+		<result property="indate" column="indate"/>
+		<result property="user_id" column="user_id"/>
+		<result property="user_name" column="user_name"/>
+		<result property="password" column="password"/>
+		<result property="email" column="email"/>
+		<result property="room_id" column="room_id"/>
+		<result property="name" column="name"/>
+		<result property="location" column="location"/>
+		<result property="capacity" column="capacity"/>
+		<result property="reservation_id" column="reservation_id"/>
+		<result property="start_time" column="start_time"/>
+		<result property="end_time" column="end_time"/>
+		<result property="purpose" column="purpose"/>
+		<result property="reservation_Date" column="reservation_Date"/>
+	</resultMap>
+
+	<insert id="insertBoard" parameterType="reservationVO">
+
+			INSERT INTO TBL_BOARD
+				( IDX
+				  , TITLE
+				  , CONTENTS
+				  , COUNT
+				  , WRITER
+				  , INDATE )
+			VALUES ( NULL
+				  , #{title, jdbcType=VARCHAR}
+				  , #{contents,jdbcType=VARCHAR}
+				  , #{count, jdbcType=VARCHAR}
+				  , #{writer,jdbcType=VARCHAR}
+				  , SYSDATE() )
+
+	</insert>
+	
+	
+	<update id="updateBoard">
+		UPDATE TBL_BOARD
+		SET TITLE = #{title},
+			CONTENTS = #{contents, jdbcType=VARCHAR }
+		WHERE IDX = #{idx}
+	</update>
+	
+	<delete id="deleteBoard">
+
+			DELETE FROM TBL_BOARD
+			WHERE IDX=#{idx}
+
+	</delete>
+	
+	<select id="selectBoard" resultMap="reservation">
+		SELECT
+		A.IDX as idx
+		, A.TITLE as title
+		, A.CONTENTS as contents
+		, A.COUNT as count
+		, A.WRITER as writer
+		, A.INDATE as indate
+		, B.USER_NAME as writerNm
+		FROM TBL_BOARD A LEFT JOIN TBL_USERS B ON A.WRITER = B.USER_ID
+		WHERE IDX=#{idx,jdbcType=VARCHAR}
+	</select>
+
+	<select id="selectBoardList" parameterType="reservationVO" resultType="egovMap">
+	    SELECT 
+	        A.IDX as idx,
+	        A.TITLE as title,
+	        A.CONTENTS as contents,
+	        IFNULL(A.COUNT, 0) as count, 
+	        A.WRITER as writer,
+	        A.INDATE as indate,
+	        B.USER_NAME as writerNm 
+	    FROM TBL_BOARD A 
+	    LEFT JOIN TBL_USERS B ON A.WRITER = B.USER_ID
+	    WHERE 1=1
+	    <if test="searchKeyword != null and searchKeyword != ''">
+	        AND (A.TITLE LIKE CONCAT('%', #{searchKeyword}, '%')
+	        OR A.CONTENTS LIKE CONCAT('%', #{searchKeyword}, '%'))
+	    </if>
+	    ORDER BY A.IDX DESC
+	    LIMIT #{firstIndex}, #{recordCountPerPage}
+	</select>
+
+
+	<select id="selectBoardListTotCnt" parameterType="reservationVO" resultType="int">
+
+			SELECT COUNT(*) totcnt
+			FROM TBL_BOARD A
+		WHERE 1=1
+		<if test="searchKeyword != null and searchKeyword != ''">
+		AND ( A.TITLE LIKE CONCAT('%', #{searchKeyword}, '%'))
+		OR A.CONTENTS LIKE CONCAT('%', #{searchKeyword}, '%')
+		</if>
+	</select>
+	
+	<select id="selectLoginCheck" parameterType="reservationVO" resultType="String">
+	
+		SELECT USER_NAME
+		FROM TBL_USERS
+		WHERE 1=1
+		AND USER_ID = #{user_id}
+		AND PASSWORD = #{password}
+	
+	</select>
+	
+	
+	<insert id="insertBooking" parameterType="reservationVO">
+		INSERT INTO TBL_RESERVATIONS 
+			(ROOM_ID, 
+			USER_ID, 
+			START_TIME, 
+			END_TIME, 
+			PURPOSE)
+        VALUES 
+        	(#{room_id},
+        	 #{user_id}, 
+        	 #{start_time}, 
+        	 #{end_time}, 
+        	 #{purpose})	
+	</insert>
+	
+	
+	<delete id="deleteBooking">
+
+		DELETE FROM TBL_RESERVATIONS
+		WHERE RESERVATION_ID=#{reservation_id}
+
+	</delete>
+	
+	<select id="selectBooking" resultMap="reservation">
+	    SELECT
+	        A.RESERVATION_ID AS reservation_id,
+	        A.ROOM_ID AS room_id,
+	        A.USER_ID AS user_id,
+	        A.PURPOSE AS purpose,
+	        A.START_TIME AS start_time,
+	        A.END_TIME AS end_time
+	    FROM TBL_RESERVATIONS A
+	    LEFT JOIN TBL_USERS B ON A.USER_ID = B.USER_ID
+	    LEFT JOIN TBL_ROOMS R ON A.ROOM_ID = R.ROOM_ID
+	    WHERE A.RESERVATION_ID = #{reservation_id, jdbcType=VARCHAR}
+	</select>
+	
+    <select id="selectBookingList" parameterType="reservationVO" resultType="reservationVO">
+        SELECT
+            RESERVATION_ID as reservation_id,
+            ROOM_ID AS room_id,
+            USER_ID AS user_id,
+            PURPOSE AS purpose, 
+            START_TIME AS start_time,
+            END_TIME AS end_time
+        FROM TBL_RESERVATIONS
+        ORDER BY RESERVATION_ID DESC
+    </select>
+    
+    <update id="updateBoardCount">  UPDATE TBL_BOARD
+		SET COUNT = IFNULL(COUNT, 0)+1
+		WHERE IDX=#{idx}
+	</update>
+	
+	
+    <select id="getNextReservationIdx" resultType="int">
+        SELECT IFNULL(MAX(reservation_id), 0) + 1 FROM TBL_RESERVATIONS
+    </select>
+
+	
+
+</mapper>
